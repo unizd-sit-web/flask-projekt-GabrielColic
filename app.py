@@ -4,7 +4,7 @@ import locale
 from flask import Flask, render_template, redirect, url_for, session, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, FloatField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 from flask_bootstrap import Bootstrap5
 from datetime import datetime
 from flask_caching import Cache
@@ -51,8 +51,8 @@ class SettingsForm(FlaskForm):
     city = StringField('Grad')
     lang = SelectField('Jezik', choices=[('hr', 'Hrvatski'), ('en', 'English'), ('de', 'Deutsch')], validators=[DataRequired()])
     units = SelectField(choices=[('metric', 'Metric'), ('imperial', 'Imperial')], validators=[DataRequired()])
-    lat = FloatField('Latitude')
-    lon = FloatField('Longitude')
+    lat = FloatField('Latitude', validators=[Optional()])
+    lon = FloatField('Longitude', validators=[Optional()])
     submit = SubmitField('Spremi')
 
 @app.route('/settings/', methods=['GET', 'POST'])
@@ -62,6 +62,8 @@ def settings():
         city = form.city.data.strip()
         lat = form.lat.data
         lon = form.lon.data
+
+        print(f"Submitted City: {city}, Latitude: {lat}, Longitude: {lon}")
         
         
         if city:
@@ -75,6 +77,8 @@ def settings():
 
         session['lang'] = form.lang.data
         session['units'] = form.units.data
+
+        print(f"Session Data After Submit: {session}")
 
         cache.clear()
 
