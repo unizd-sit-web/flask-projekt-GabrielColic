@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Vrijeme i vremenska prognoza</h1>
+<div class="card" style="width: 24rem;">
+    <h4 class="card-header">
+        {{weather.name}}
+    </h4>
+    <div class="card-body">
+        <h5 class="card-title">{{weather.weather[0].description}}</h5>
+        <div class="card-text">
+            <p>Temperatura: {{weather.main.temp}}</p>
+            <p>Osjećaj temperature: {{weather.main.feels_like}}</p>
+            <p>Vlažnost zraka: {{weather.main.humidity}}%</p>
+            <p>Tlak: {{weather.main.pressure}} hpa</p>
+            <p>Datum: {{datetime.fromtimestamp(weather.dt)}}</p>
+            <p>Izlazak sunca: {{weather.sys.sunrise | datetime('time')}}</p>
+            <p>Zalazak sunca: {{weather.sys.sunset | datetime('time')}}</p>
+            <p>Brzina vjetra: {{weather.wind.speed}}</p>
+            <p>Smjer vjetra u stupnjevima: {{weather.wind.deg}}</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

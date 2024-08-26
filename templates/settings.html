@@ -1,0 +1,51 @@
+{% from 'bootstrap5/form.html' import render_form %}
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Uredite postavke aplikacije</h2>
+<div class="row">
+    <div class="col-3">
+        <form method="post" action="{{ url_for('settings') }}">
+            {{ render_form(form) }}
+            <input type="hidden" id="lat" name="lat" value="{{ form.lat.data or '' }}">
+            <input type="hidden" id="lon" name="lon" value="{{ form.lon.data or '' }}">
+        </form>
+    </div>
+    <div class="col-9">
+        <!-- Google Map -->
+        <div id="map" style="height: 400px; width: 100%;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ bootstrap.load_js() }}
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFcrRQCwkbPzlRYJrpEaV32AwP4B-HZPc&libraries=places"></script>
+    <script>
+        function initMap() {
+            const initialPosition = {
+                lat: {{ form.lat.data or 45.8150 }},
+                lng: {{ form.lon.data or 15.9819 }}
+            };
+
+            const map = new google.maps.Map(document.getElementById("map"), {
+                center: initialPosition,
+                zoom: 8,
+            });
+
+            const marker = new google.maps.Marker({
+                position: initialPosition,
+                map: map,
+                draggable: true,
+            });
+
+            google.maps.event.addListener(marker, 'dragend', function() {
+                const position = marker.getPosition();
+                document.getElementById('lat').value = position.lat();
+                document.getElementById('lon').value = position.lng();
+            });
+        }
+
+        window.onload = initMap;
+    </script>
+{% endblock %}
