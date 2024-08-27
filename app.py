@@ -1,7 +1,7 @@
 import os
 import requests
 import locale
-from flask import Flask, render_template, redirect, url_for, session, request, flash
+from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, FloatField
 from wtforms.validators import DataRequired, Optional
@@ -10,11 +10,11 @@ from datetime import datetime
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 
-# Configure locale and API key
+# Locale i api ključ
 locale.setlocale(locale.LC_ALL, 'hr')
 OPEN_WEATHER_API_KEY = os.environ.get('OPEN_WEATHER_API_KEY')
 
-# Initialize Flask app, Bootstrap, and Cache
+# Inicijalizacija
 app = Flask(__name__)
 bootstrap = Bootstrap5(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
@@ -27,14 +27,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather_app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# City model to save searched cities
 class City(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-# Initialize the database
 with app.app_context():
     db.create_all()
+
+# Stranice
 
 @app.route('/')
 @cache.cached(timeout=60)
@@ -64,9 +64,9 @@ def index():
 class SettingsForm(FlaskForm):
     city = StringField('Grad')
     lang = SelectField('Jezik', choices=[('hr', 'Hrvatski'), ('en', 'English'), ('de', 'Deutsch')], validators=[DataRequired()])
-    units = SelectField(choices=[('metric', 'Metric'), ('imperial', 'Imperial')], validators=[DataRequired()])
-    lat = FloatField('Latitude', validators=[Optional()])
-    lon = FloatField('Longitude', validators=[Optional()])
+    units = SelectField('Mjerne jedinice', choices=[('metric', 'Metrički'), ('imperial', 'Imperijalni')], validators=[DataRequired()])
+    lat = FloatField('Geografska širina', validators=[Optional()])
+    lon = FloatField('Geografska dužina', validators=[Optional()])
     submit = SubmitField('Spremi')
 
 @app.route('/settings/', methods=['GET', 'POST'])
@@ -81,7 +81,6 @@ def settings():
             session['city'] = city
             session.pop('lat', None)
             session.pop('lon', None)
-            # Save the searched city to the database if not already saved
             existing_city = City.query.filter_by(name=city).first()
             if not existing_city:
                 new_city = City(name=city)
@@ -105,7 +104,6 @@ def settings():
     form.lat.data = session.get('lat')
     form.lon.data = session.get('lon')
 
-    # Retrieve all saved cities for display
     saved_cities = City.query.all()
 
     return render_template('settings.html', form=form, saved_cities=saved_cities)

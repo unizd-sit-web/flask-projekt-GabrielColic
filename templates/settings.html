@@ -16,7 +16,7 @@
         <div id="map" style="height: 400px; width: 100%;"></div>
     </div>
     <div class="col-12 mt-4">
-        <h3>Previously Searched Cities</h3>
+        <h3>Već traženi gradovi</h3>
         <ul>
             {% for city in saved_cities %}
                 <li><a href="{{ url_for('select_city', city_name=city.name) }}">{{ city.name }}</a></li>
