@@ -1,13 +1,14 @@
 import os
 import requests
 import locale
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, session, request, flash
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, FloatField
 from wtforms.validators import DataRequired, Optional
 from flask_bootstrap import Bootstrap5
 from datetime import datetime
 from flask_caching import Cache
+from flask_sqlalchemy import SQLAlchemy
 
 # Configure locale and API key
 locale.setlocale(locale.LC_ALL, 'hr')
@@ -21,6 +22,19 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 app.config['SECRET_KEY'] = 'MOJ_TAJNI_KLJUČ'
 app.config['BOOTSTRAP_BTN_STYLE'] = 'primary'
 app.config['BOOTSTRAP_BOOTSWATCH_THEME'] = 'cerulean'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather_app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# City model to save searched cities
+class City(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+
+# Initialize the database
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 @cache.cached(timeout=60)
@@ -62,23 +76,24 @@ def settings():
         city = form.city.data.strip()
         lat = form.lat.data
         lon = form.lon.data
-
-        print(f"Submitted City: {city}, Latitude: {lat}, Longitude: {lon}")
-        
         
         if city:
             session['city'] = city
-            session.pop('lat', None)  # Remove latitude if city is provided
-            session.pop('lon', None)  # Remove longitude if city is provided
+            session.pop('lat', None)
+            session.pop('lon', None)
+            # Save the searched city to the database if not already saved
+            existing_city = City.query.filter_by(name=city).first()
+            if not existing_city:
+                new_city = City(name=city)
+                db.session.add(new_city)
+                db.session.commit()
         elif lat and lon:
             session['lat'] = lat
             session['lon'] = lon
-            session.pop('city', None)  # Remove city if coordinates are provided
+            session.pop('city', None)
 
         session['lang'] = form.lang.data
         session['units'] = form.units.data
-
-        print(f"Session Data After Submit: {session}")
 
         cache.clear()
 
@@ -90,7 +105,10 @@ def settings():
     form.lat.data = session.get('lat')
     form.lon.data = session.get('lon')
 
-    return render_template('settings.html', form=form)
+    # Retrieve all saved cities for display
+    saved_cities = City.query.all()
+
+    return render_template('settings.html', form=form, saved_cities=saved_cities)
 
 @app.template_filter('datetime')
 def format_datetime(value, format='%d.%m.%Y %H:%M'):
@@ -120,3 +138,20 @@ def forecast_days():
     response = requests.get(url, params=parameters)
     weather = response.json()
     return render_template('forecast_days.html', weather=weather)
+
+@app.route('/select_city/<city_name>')
+def select_city(city_name):
+    city = City.query.filter_by(name=city_name).first()
+    if city:
+        session['city'] = city.name
+        session.pop('lat', None)
+        session.pop('lon', None)
+        cache.clear()
+    return redirect(url_for('index'))
+
+@app.route('/delete_cities', methods=['POST'])
+def delete_cities():
+    db.session.query(City).delete()
+    db.session.commit()
+    flash('Svi gradovi su izbrisani', 'success')
+    return redirect(url_for('settings'))
